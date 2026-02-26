@@ -12,7 +12,7 @@ void checkPrime(int oldPipe[2])
         close(oldPipe[0]);
         exit(0);
     }
-    printf("Prime %d\n", p);
+    printf("prime %d\n", p);
     // Tao pipe moi cho tien trinh tiep theo
     int newPipe[2];
     pipe(newPipe);
@@ -35,6 +35,7 @@ void checkPrime(int oldPipe[2])
                 write(newPipe[1], &n, sizeof(int));
         }
     }
+    
     // Dong cac pipe cu
     close(oldPipe[0]);
     close(newPipe[1]);

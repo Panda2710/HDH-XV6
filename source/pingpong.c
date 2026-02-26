@@ -17,7 +17,8 @@ int main()
         // Tiến trình con
         close(fd[1]); // Đóng đầu ghi vì tiến trình con chỉ đọc pipe1
         read(fd[0], buffer, sizeof(buffer));
-        printf("Child received: %s\n", buffer);
+
+        printf("%d: received %s\n", getpid(), buffer);
         close(fd[0]);
         close(fd2[0]); // Đóng đầu đọc pipe2  tiến trình con chỉ ghi vào pipe2
         write(fd2[1], "pong", 5);
@@ -32,7 +33,7 @@ int main()
         close(fd[1]);
         close(fd2[1]); // Đóng đầu ghi pipe2 vì tiến trình cha chỉ đọc từ pipe2
         read(fd2[0], buffer, sizeof(buffer));
-        printf("Parent received: %s\n", buffer);
+        printf("%d: received %s\n", getpid(), buffer);
         close(fd2[0]);
     }
 
