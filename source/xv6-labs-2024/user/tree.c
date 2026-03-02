@@ -18,7 +18,7 @@ void parseName(char *output, struct dirent *inputEntry) {
     output[DIRSIZ] = '\0';
 }
 
-// Trích tên file/thư mục từ path
+// Trích tên file/thư mục từ path (chỉ dùng một lần, cho path được truyền vào lệnh)
 void nameFromPath(char *output, const char *inputPath) {
     for (int i = strlen(inputPath); i >= 0; i--) {
         if (inputPath[i] == '/') {
@@ -27,6 +27,7 @@ void nameFromPath(char *output, const char *inputPath) {
             return;
         }
     }
+    strcpy(output, inputPath);
 }
 
 // Gộp path và tên entry để tạo path mới
