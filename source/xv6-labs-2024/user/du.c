@@ -18,7 +18,7 @@ long du(char *path) {
     //Xử lý nếu là file
     if(st.type == T_FILE) {
         // Nếu có -a và không có -s, in dung lượng file
-        if(a_flag && !s_flag) printf("%l\t%s\n", st.size, path); 
+        if(a_flag && !s_flag) printf("%ld\t%s\n", st.size, path); 
         close(fd);
         return st.size; 
     } else if(st.type == T_DIR) {
@@ -36,7 +36,7 @@ long du(char *path) {
             total_size += du(buf); 
         }
         // Mặc định in dung lượng thư mục nếu không có -s
-        if(!s_flag) printf("%l\t%s\n", total_size, path); 
+        if(!s_flag) printf("%ld\t%s\n", total_size, path); 
         close(fd);
         return total_size;
     }
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     long total = du(target_path);
     
     // Nếu có flag -s, chỉ in tổng dung lượng
-    if(s_flag) printf("%l\t%s\n", total, target_path); 
+    if(s_flag) printf("%ld\t%s\n", total, target_path); 
 
     exit(0);
 }
