@@ -198,7 +198,7 @@ UPROGS=\
 	$U/_primes\
 	$U/_pingpong\
 	$U/_cp\
-
+	$U/_tree\
 
 
 ifeq ($(LAB),syscall)
