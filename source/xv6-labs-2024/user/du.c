@@ -12,30 +12,30 @@ long du(char *path) {
     struct dirent de;
     struct stat st;
     long total_size = 0;
-    // return 0 nếu thư mục không tồn tại hoặc không thể mở
+    // return 0 neu khong mo duoc file hoac thu muc
     if((fd = open(path, 0)) < 0) return 0;
     if(fstat(fd, &st) < 0) { close(fd); return 0; }
-    //Xử lý nếu là file
+    //Neu la file
     if(st.type == T_FILE) {
-        // Nếu có -a và không có -s, in dung lượng file
+        // In ra dung luong file neu co flag -a
         if(a_flag && !s_flag) printf("%ld\t%s\n", st.size, path); 
         close(fd);
         return st.size; 
     } else if(st.type == T_DIR) {
-        // Xử lý nếu là thư mục
-        // Chép đường dẫn vào buf để chuẩn bị cho việc đệ quy
+        // Xu ly neu lla thu muc
+        // Chep path vao buf de chuan bi cho viec de quy
         strcpy(buf, path);
         p = buf + strlen(buf);
         *p++ = '/';
         while(read(fd, &de, sizeof(de)) == sizeof(de)){
-            // Bỏ qua "." và ".."
+            // Bo qua "." va ".."
             if(de.inum == 0 || strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0) continue; 
             memmove(p, de.name, DIRSIZ);
             p[DIRSIZ] = 0;
-            // Cộng dồn đệ quy
+            // Cong de quy 
             total_size += du(buf); 
         }
-        // Mặc định in dung lượng thư mục nếu không có -s
+        // Mac dinh in dung luong thu muc neu khong co flag -s
         if(!s_flag) printf("%ld\t%s\n", total_size, path); 
         close(fd);
         return total_size;
@@ -45,9 +45,9 @@ long du(char *path) {
 }
 
 int main(int argc, char *argv[]) {
-    char *target_path = "."; // Mặc định là "."
+    char *target_path = "."; // Mac dinh la "." (thu muc hien tai)
 
-    // Xử lý tham số dòng lệnh để bật a_flag, s_flag và lấy target_path
+    // Xu ly tham so truyen vao
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-a") == 0) a_flag = 1;
         else if (strcmp(argv[i], "-s") == 0) s_flag = 1;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 
     long total = du(target_path);
     
-    // Nếu có flag -s, chỉ in tổng dung lượng
+    // NNeu co flag -s, chi in tong dung luong
     if(s_flag) printf("%ld\t%s\n", total, target_path); 
 
     exit(0);

@@ -1,4 +1,4 @@
-﻿#include "kernel/types.h"
+#include "kernel/types.h"
 #include "user/user.h"
 void checkPrime(int oldPipe[2])
 {

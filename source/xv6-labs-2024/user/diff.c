@@ -6,16 +6,16 @@ int readline(int fd, char *buf, int max) {
     int i = 0;
     char c;
     
-    // Đọc từng byte một từ file descriptor
+    // Doc tung byte mot tu fd
     while (i < max - 1 && read(fd, &c, 1) > 0) {
         if (c == '\n') {
-            break; // Dừng khi gặp xuống dòng
+            break;
         }
         buf[i++] = c;
     }
-    buf[i] = '\0'; // Kết thúc chuỗi chuẩn C
+    buf[i] = '\0'; // Them null terminator vao cuoi chuoi (de chuan C)
     
-    return i; // Trả về số lượng ký tự đã đọc (0 nếu là EOF)
+    return i; // Return do dai cua dong da doc (khong tinh '\n') (return 0 neu la EOF)
 }
 
 int main(int argc, char *argv[]) {
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int q_flag = 0; // Cờ để kiểm tra flag -q
+    int q_flag = 0; // Co kiem tra flag -q
     char *f1_name = 0;
     char *f2_name = 0;
 
@@ -50,24 +50,24 @@ int main(int argc, char *argv[]) {
     int line_num = 1;
 
     while (1) {
-        //Đọc 2 file và lưu độ dài của mỗi dòng vào len1 và len2
+        //Doc 2 file va luu do dai moi dong vao len1 va len2
         int len1 = readline(fd1, buf1, sizeof(buf1));
         int len2 = readline(fd2, buf2, sizeof(buf2));
-        //Trường hợp 2 file đều đã EOF
+        //Truong hop 2 file deu da doc het (len1 va len2 deu bang 0) thi thoat vong lap
         if (len1 == 0 && len2 == 0) break; 
-        //Trường hợp 2 dòng khác nhau
+        //Truong hop 2 dong khac nhau thi in ra theo format -q neu co, neu khong thi in ra dong khac nhau va EOF neu co
         if (strcmp(buf1, buf2) != 0) {
-            // In theo format -q
+            // In theo -q
             if (q_flag) {
                 printf("diff: files differ\n");
                 break;
             }
-            // Nếu dòng của file 1 > 0 -> in ra, không thì in EOF
+            // Neu dong cua file 1 > 0 -> in ra, khong thi in EOF
             if (len1 > 0) printf("%s:%d: < %s\n", f1_name, line_num, buf1);
-            else printf("%s:%d: <EOF\n", f1_name, line_num);
-            // Nếu dòng của file 2 > 0 -> in ra, không thì in EOF
+            else printf("%s:%d: < EOF\n", f1_name, line_num);
+            // Neu dong cua file 2 > 0 -> in ra, khong thi in EOF
             if (len2 > 0) printf("%s:%d: > %s\n", f2_name, line_num, buf2);
-            else printf("%s:%d: <EOF\n", f2_name, line_num);
+            else printf("%s:%d: > EOF\n", f2_name, line_num);
         }
         line_num++;
     }

@@ -1,0 +1,492 @@
+diff --git a/source/xv6-labs-2024/Makefile b/source/xv6-labs-2024/Makefile
+index 74e454f..13225ea 100644
+--- a/source/xv6-labs-2024/Makefile
++++ b/source/xv6-labs-2024/Makefile
+@@ -194,7 +194,13 @@ UPROGS=\
+ 	$U/_grind\
+ 	$U/_wc\
+ 	$U/_zombie\
+-
++	$U/_sleep\
++	$U/_primes\
++	$U/_pingpong\
++	$U/_cp\
++	$U/_tree\
++	$U/_du\
++	$U/_diff\
+ 
+ 
+ 
+diff --git a/source/xv6-labs-2024/user/cp.c b/source/xv6-labs-2024/user/cp.c
+new file mode 100644
+index 0000000..381fc5a
+--- /dev/null
++++ b/source/xv6-labs-2024/user/cp.c
+@@ -0,0 +1,46 @@
++#include "kernel/types.h"
++#include "user/user.h"
++#include "kernel/stat.h"
++#include "kernel/fcntl.h"
++#include "kernel/fs.h"
++#include "kernel/types.h"
++
++void cp(const char *src, const char *dst)
++{
++  int fd_src = open(src, O_RDONLY);//file dung de doc
++  if (fd_src < 0) {
++    fprintf(2, "cp: cannot open source file %s\n", src);
++    return;
++  }
++
++  int fd_dst = open(dst, O_WRONLY | O_CREATE | O_TRUNC);// file dung de ghi, neu file da ton tai thi xoa va tao lai, neu khong thi tao moi
++  if (fd_dst < 0) {
++    fprintf(2, "cp: cannot open destination file %s\n", dst);
++    close(fd_src);
++    return;
++  }
++
++  char buf[512];//bo dem
++  int n;
++  while ((n = read(fd_src, buf, sizeof(buf))) > 0) {
++    if (write(fd_dst, buf, n) != n) {//chi ghi n byyte da doc
++      fprintf(2, "cp: write error to %s\n", dst);
++      break;
++    }
++  }
++  if (n < 0) {
++    fprintf(2, "cp: read error from %s\n", src);
++  }
++
++  close(fd_src);
++  close(fd_dst);
++}
++void main(int argc, char *argv[])
++{
++  if (argc != 3) {
++    fprintf(2, "Usage: cp <source> <destination>\n");
++    exit(1);
++  }
++  cp(argv[1], argv[2]);
++  exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/diff.c b/source/xv6-labs-2024/user/diff.c
+new file mode 100644
+index 0000000..3300d4d
+--- /dev/null
++++ b/source/xv6-labs-2024/user/diff.c
+@@ -0,0 +1,78 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++
++int readline(int fd, char *buf, int max) {
++    int i = 0;
++    char c;
++    
++    // Doc tung byte mot tu fd
++    while (i < max - 1 && read(fd, &c, 1) > 0) {
++        if (c == '\n') {
++            break;
++        }
++        buf[i++] = c;
++    }
++    buf[i] = '\0'; // Them null terminator vao cuoi chuoi (de chuan C)
++    
++    return i; // Return do dai cua dong da doc (khong tinh '\n') (return 0 neu la EOF)
++}
++
++int main(int argc, char *argv[]) {
++    if (argc < 3) {
++        printf("Usage: diff file1 file2 [-q]\n");
++        exit(1);
++    }
++
++    int q_flag = 0; // Co kiem tra flag -q
++    char *f1_name = 0;
++    char *f2_name = 0;
++
++    for (int i = 1; i < argc; i++) {
++        if (strcmp(argv[i], "-q") == 0) {
++            q_flag = 1;
++        } else if (f1_name == 0) {
++            f1_name = argv[i];
++        } else if (f2_name == 0) {
++            f2_name = argv[i];
++        }
++    }
++
++    int fd1 = open(f1_name, 0);
++    int fd2 = open(f2_name, 0);
++
++    if (fd1 < 0 || fd2 < 0) {
++        printf("diff: cannot open files\n");
++        exit(1);
++    }
++
++    char buf1[512], buf2[512];
++    int line_num = 1;
++
++    while (1) {
++        //Doc 2 file va luu do dai moi dong vao len1 va len2
++        int len1 = readline(fd1, buf1, sizeof(buf1));
++        int len2 = readline(fd2, buf2, sizeof(buf2));
++        //Truong hop 2 file deu da doc het (len1 va len2 deu bang 0) thi thoat vong lap
++        if (len1 == 0 && len2 == 0) break; 
++        //Truong hop 2 dong khac nhau thi in ra theo format -q neu co, neu khong thi in ra dong khac nhau va EOF neu co
++        if (strcmp(buf1, buf2) != 0) {
++            // In theo -q
++            if (q_flag) {
++                printf("diff: files differ\n");
++                break;
++            }
++            // Neu dong cua file 1 > 0 -> in ra, khong thi in EOF
++            if (len1 > 0) printf("%s:%d: < %s\n", f1_name, line_num, buf1);
++            else printf("%s:%d: < EOF\n", f1_name, line_num);
++            // Neu dong cua file 2 > 0 -> in ra, khong thi in EOF
++            if (len2 > 0) printf("%s:%d: > %s\n", f2_name, line_num, buf2);
++            else printf("%s:%d: > EOF\n", f2_name, line_num);
++        }
++        line_num++;
++    }
++
++    close(fd1);
++    close(fd2);
++    exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/du.c b/source/xv6-labs-2024/user/du.c
+new file mode 100644
+index 0000000..b864ee2
+--- /dev/null
++++ b/source/xv6-labs-2024/user/du.c
+@@ -0,0 +1,63 @@
++#include "kernel/types.h"
++#include "kernel/stat.h"
++#include "user/user.h"
++#include "kernel/fs.h"
++
++int a_flag = 0;
++int s_flag = 0;
++
++long du(char *path) {
++    char buf[512], *p;
++    int fd;
++    struct dirent de;
++    struct stat st;
++    long total_size = 0;
++    // return 0 neu khong mo duoc file hoac thu muc
++    if((fd = open(path, 0)) < 0) return 0;
++    if(fstat(fd, &st) < 0) { close(fd); return 0; }
++    //Neu la file
++    if(st.type == T_FILE) {
++        // In ra dung luong file neu co flag -a
++        if(a_flag && !s_flag) printf("%ld\t%s\n", st.size, path); 
++        close(fd);
++        return st.size; 
++    } else if(st.type == T_DIR) {
++        // Xu ly neu lla thu muc
++        // Chep path vao buf de chuan bi cho viec de quy
++        strcpy(buf, path);
++        p = buf + strlen(buf);
++        *p++ = '/';
++        while(read(fd, &de, sizeof(de)) == sizeof(de)){
++            // Bo qua "." va ".."
++            if(de.inum == 0 || strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0) continue; 
++            memmove(p, de.name, DIRSIZ);
++            p[DIRSIZ] = 0;
++            // Cong de quy 
++            total_size += du(buf); 
++        }
++        // Mac dinh in dung luong thu muc neu khong co flag -s
++        if(!s_flag) printf("%ld\t%s\n", total_size, path); 
++        close(fd);
++        return total_size;
++    }
++    close(fd);
++    return 0;
++}
++
++int main(int argc, char *argv[]) {
++    char *target_path = "."; // Mac dinh la "." (thu muc hien tai)
++
++    // Xu ly tham so truyen vao
++    for (int i = 1; i < argc; i++) {
++        if (strcmp(argv[i], "-a") == 0) a_flag = 1;
++        else if (strcmp(argv[i], "-s") == 0) s_flag = 1;
++        else target_path = argv[i];
++    }
++
++    long total = du(target_path);
++    
++    // NNeu co flag -s, chi in tong dung luong
++    if(s_flag) printf("%ld\t%s\n", total, target_path); 
++
++    exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/pingpong.c b/source/xv6-labs-2024/user/pingpong.c
+new file mode 100644
+index 0000000..8e1698c
+--- /dev/null
++++ b/source/xv6-labs-2024/user/pingpong.c
+@@ -0,0 +1,41 @@
++#include "kernel/types.h"
++#include "user/user.h"
++
++int main()
++{
++
++    int fd[2];  // Mang luu cha gui con
++    int fd2[2]; // Mang luu con gui cha
++    char buffer[50];
++    // Tao pipe
++    pipe(fd);
++    pipe(fd2);
++
++    // TTao tien trinh con
++    if (fork() == 0)
++    {
++        // Tien trinh con
++        close(fd[1]); // Dong dau ghi vi tien trinh con chi doc tu pipe1
++        read(fd[0], buffer, sizeof(buffer));
++
++        printf("%d: received %s\n", getpid(), buffer);
++        close(fd[0]);
++        close(fd2[0]); // Dong dau doc vi tien trinh con chi ghi vao pipe2
++        write(fd2[1], "pong", 5);
++        close(fd2[1]);
++    }
++    else
++    {
++        // Tien trinh cha
++
++        close(fd[0]); // Dong dau doc vi tien trinh cha chi ghi vao pipe1
++        write(fd[1], "ping", 5);
++        close(fd[1]);
++        close(fd2[1]); // Dong dau ghi vi tien trinh cha chi doc tu pipe2
++        read(fd2[0], buffer, sizeof(buffer));
++        printf("%d: received %s\n", getpid(), buffer);
++        close(fd2[0]);
++    }
++
++    exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/primes.c b/source/xv6-labs-2024/user/primes.c
+new file mode 100644
+index 0000000..37c70cd
+--- /dev/null
++++ b/source/xv6-labs-2024/user/primes.c
+@@ -0,0 +1,66 @@
++#include "kernel/types.h"
++#include "user/user.h"
++void checkPrime(int oldPipe[2])
++{
++    int p;
++    int n;
++
++    close(oldPipe[1]); // Dong dau ghi cua pipe cu
++    // Ghi so dau tien cua pipe cu vao p (luon la so nguyen to)
++    if (read(oldPipe[0], &p, sizeof(p)) <= 0)
++    {
++        close(oldPipe[0]);
++        exit(0);
++    }
++    printf("prime %d\n", p);
++    // Tao pipe moi cho tien trinh tiep theo
++    int newPipe[2];
++    pipe(newPipe);
++
++    if (fork() == 0)
++    {
++        // Con
++        close(oldPipe[0]);   // Dong dau doc cua pipe cu
++        checkPrime(newPipe); // Goi de quy
++    }
++    else
++    {
++        // Cha
++        close(newPipe[0]); // Dong dau doc cua pipe moi
++        // Doc tung phan tu trong pipe cu va thuc hien sang so nguyen to
++        while (read(oldPipe[0], &n, sizeof(int)))
++        {
++            // Neu nhu khong phai la boi so cua p thi ghi vao pipe moi, khong thi se khong ghi
++            if (n % p != 0)
++                write(newPipe[1], &n, sizeof(int));
++        }
++    }
++    
++    // Dong cac pipe cu
++    close(oldPipe[0]);
++    close(newPipe[1]);
++    wait(0);
++    exit(0);
++}
++
++int main()
++{
++    int fd[2];
++    pipe(fd);
++    if (fork() == 0)
++    {
++        checkPrime(fd);
++    }
++    else
++    {
++        close(fd[0]); // Dong dau doc chi su dung dau ghi
++        int i;
++        for (i = 2; i <= 280; i++)
++        {
++            write(fd[1], &i, sizeof(int));
++        }
++        close(fd[1]);
++        wait(0);
++    }
++    exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/sleep.c b/source/xv6-labs-2024/user/sleep.c
+new file mode 100644
+index 0000000..767e8e2
+--- /dev/null
++++ b/source/xv6-labs-2024/user/sleep.c
+@@ -0,0 +1,12 @@
++
++#include "kernel/types.h"
++#include "user/user.h"
++int main(int agrc, char **argv) {
++if(agrc != 2) {
++ printf("not enough arguments\n");
++ exit(1);
++}
++ printf("Sleeping for %s ticks...\n", argv[1]);
++ sleep(atoi(argv[1]));
++ exit(0);
++}
+diff --git a/source/xv6-labs-2024/user/tree.c b/source/xv6-labs-2024/user/tree.c
+new file mode 100644
+index 0000000..c4c463b
+--- /dev/null
++++ b/source/xv6-labs-2024/user/tree.c
+@@ -0,0 +1,125 @@
++#include "kernel/types.h"
++#include "kernel/fs.h"
++#include "kernel/stat.h"
++#include "kernel/fcntl.h"
++#include "user/user.h"
++
++// In khoang trang dau dong
++void printIndent(const int level) {
++    if (level < 1)
++        return;
++    for (int i = 1; i <= level; i++)
++        printf("   ");
++}
++
++// Layy ten tu struct dirent va them vao \0
++void parseName(char *output, struct dirent *inputEntry) {
++    memmove(output, inputEntry->name, DIRSIZ);
++    output[DIRSIZ] = '\0';
++}
++
++// Trich ten file, thu muc tu path (chi dung mot lan, cho path duoc truyen vao lenh))
++void nameFromPath(char *output, const char *inputPath) {
++    for (int i = strlen(inputPath); i >= 0; i--) {
++        if (inputPath[i] == '/') {
++            memmove(output, inputPath + i + 1, DIRSIZ);
++            output[DIRSIZ] = '\0';
++            return;
++        }
++    }
++    strcpy(output, inputPath);
++}
++
++// Gop path + ten entry de tao path moi
++void concatPath(char *output, const char *ogPath, const char *entryName) {
++    memmove(output, ogPath, strlen(ogPath));
++    output[strlen(ogPath)] = '/';
++    memmove(output + strlen(ogPath) + 1, entryName, strlen(entryName));
++    output[strlen(ogPath) + strlen(entryName) + 1] = '\0';
++}
++
++// In cay (de quy)
++void tree(const char *path, const char *name, const int level, const int maxLevel, const int dirOnly) {
++    if (level > maxLevel)
++        return;
++
++    int fd = open(path, O_RDONLY);
++    struct stat st;
++
++    if (fd < 0) {
++        printf("%s%s\n", "Could not get file descriptor for: ", path);
++        return;
++    }
++    if (fstat(fd, &st) < 0) {
++        printf("%s%s\n", "Could not parse fstat for: ", path);
++        close(fd);
++        return;
++    }
++
++    // Neu co flag dirOnly thi chi in neu la thu muc
++    if (dirOnly == 1) {
++        if (st.type == T_DIR) {
++            printIndent(level);
++            printf("%s\n", name);
++        }
++    }
++    // Neu khong co flag dirOnly thi in het, ke ca file
++    else {
++        printIndent(level);
++        printf("%s\n", name);
++    }
++
++    // Neu la thu muc, duyet qua cac entry
++    if (st.type == T_DIR) {
++        struct dirent de;
++        while (read(fd, &de, sizeof(de)) == sizeof(de)) {
++            // Neu entry trong, bo qua
++            if (de.inum == 0)
++                continue;
++            
++            // Lay ten tu dirent
++            char entryName[DIRSIZ + 1];
++            parseName(entryName, &de);
++            // Bo qua .. va .
++            if (strcmp(entryName, "..") == 0 || strcmp(entryName, ".") == 0)
++                continue;
++            
++            // Gop path
++            char newPath[strlen(path) + strlen(entryName) + 2];
++            concatPath(newPath, path, entryName);
++            // De quy
++            tree(newPath, entryName, level + 1, maxLevel, dirOnly);
++        }
++    }
++
++    // Neu khong la thu muc thi ngung de quy
++    close(fd);
++    return;
++}
++
++int main(int argc, char *argv[]) {
++    // Cac gia tri mac dinh
++    char *path = ".";
++    char name[DIRSIZ];
++    int depth = 256;
++    int foldersOnly = 0;
++
++    if (argc < 2)
++        tree(path, ".", 0, depth, foldersOnly);
++    else {
++        for (int i = 1; i < argc; i++) {
++            if (strcmp(argv[i], "-L") == 0)
++                depth = atoi(argv[i + 1]) > 0 ? atoi(argv[i + 1]) : 256;
++            else if (strcmp(argv[i], "-d") == 0)
++                foldersOnly = 1;
++            else {
++                if (strcmp(argv[i - 1], "-L") != 0 && strcmp(argv[i - 1], "-d") != 0)
++                    path = argv[i];
++            }
++        }
++        nameFromPath(name, path);
++        tree(path, name, 0, depth, foldersOnly);
++    }
++
++    exit(0);
++}
